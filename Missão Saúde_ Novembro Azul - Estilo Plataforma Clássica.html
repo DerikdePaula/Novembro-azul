@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Missão Saúde: Novembro Azul — Plataforma Clássica</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky-top: #1565c0;
+            --sky-bottom: #7cc4ff;
+            --blue-royal: #2563eb;
+            --cyan-bright: #38bdf8;
+            --gold-block: #ffbe0b;
+            --emerald: #00e676;
+            --crimson: #ff3b5c;
+            --text-light: #f8fbff;
+            --text-muted: #b4cde8;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+            background: #0b1e3d;
+            color: var(--text-light);
+        }
+
+        #game-shell {
+            position: relative;
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+            background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* ==========================================
+           HUD SUPERIOR RESPONSIVO
+        ========================================== */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
+            background: linear-gradient(180deg, rgba(6, 19, 43, 0.82) 0%, rgba(6, 19, 43, 0) 100%);
+            z-index: 20;
+            pointer-events: none;
+            gap: 8px;
+        }
+
+        .hud-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            pointer-events: auto;
+        }
+
+        .hud-pill {
+            background: rgba(8, 22, 48, 0.88);
+            backdrop-filter: blur(6px);
+            border: 1.5px solid rgba(255, 255, 255, 0.24);
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: clamp(0.75rem, 2.2vw, 0.92rem);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+        }
+
+        .hud-stage-tag {
+            background: rgba(37, 99, 235, 0.92);
+            border-color: #7dd3fc;
+            color: #ffffff;
+        }
+
+        .ribbon-svg-icon {
+            width: 16px;
+            height: 18px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .hud-btn {
+            background: rgba(8, 22, 48, 0.9);
+            border: 1.5px solid rgba(102, 217, 255, 0.55);
+            color: #ffffff;
+            height: 34px;
+            padding: 0 10px;
+            border-radius: 11px;
+            font-weight: 800;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.12s, background 0.15s;
+        }
+
+        .hud-btn:active {
+            transform: scale(0.93);
+            background: var(--blue-royal);
+        }
+
+        /* ==========================================
+           CONTROLES TÁTEIS MULTI-TOUCH (MOBILE / PC)
+        ========================================== */
+        #touch-controls {
+            position: absolute;
+            bottom: calc(14px + var(--safe-bottom));
+            left: calc(14px + var(--safe-left));
+            right: calc(14px + var(--safe-right));
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 22;
+            pointer-events: none;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            body:not(.show-touch) #touch-controls {
+                display: none;
+            }
+        }
+
+        body.hide-touch #touch-controls {
+            display: none !important;
+        }
+
+        .dpad-group, .action-group {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .t-btn {
+            min-width: 70px;
+            min-height: 70px;
+            border-radius: 22px;
+            background: rgba(8, 25, 56, 0.76);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.48);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.74rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.38);
+            touch-action: none;
+            transition: transform 0.06s, background 0.06s;
+        }
+
+        .t-btn span.ico {
+            font-size: 1.55rem;
+            line-height: 1;
+        }
+
+        .t-btn.pressed {
+            transform: scale(0.92);
+            background: rgba(37, 99, 235, 0.88);
+            border-color: #38bdf8;
+        }
+
+        .t-btn-jump {
+            min-width: 84px;
+            min-height: 84px;
+            border-radius: 28px;
+            background: linear-gradient(145deg, rgba(37, 99, 235, 0.82), rgba(56, 189, 248, 0.65));
+            border-color: #ffffff;
+        }
+
+        /* ==========================================
+           MODAIS DE MENU, EDUCAÇÃO E VITÓRIA
+        ========================================== */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(5, 16, 36, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: calc(14px + var(--safe-top)) calc(14px + var(--safe-right)) calc(14px + var(--safe-bottom)) calc(14px + var(--safe-left));
+            z-index: 40;
+            touch-action: auto;
+        }
+
+        .overlay.hidden {
+            display: none !important;
+        }
+
+        .card-modal {
+            background: linear-gradient(170deg, rgba(14, 39, 82, 0.97), rgba(8, 22, 48, 0.99));
+            border: 2px solid rgba(56, 189, 248, 0.5);
+            border-radius: 24px;
+            padding: clamp(16px, 3.5vw, 26px);
+            width: 100%;
+            max-width: 580px;
+            max-height: 92dvh;
+            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.78);
+            touch-action: pan-y;
+        }
+
+        .hero-ribbon-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 6px;
+        }
+
+        .modal-title {
+            font-size: clamp(1.38rem, 4.5vw, 2.1rem);
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #ffffff, #38bdf8, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-subtitle {
+            color: var(--text-muted);
+            font-size: clamp(0.84rem, 2.4vw, 0.98rem);
+            line-height: 1.4;
+            margin-bottom: 14px;
+        }
+
+        .section-label {
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #38bdf8;
+            margin-bottom: 6px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 9px;
+            margin-bottom: 14px;
+        }
+
+        .select-box {
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(255, 255, 255, 0.16);
+            border-radius: 14px;
+            padding: 10px 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .select-box.active {
+            background: rgba(37, 99, 235, 0.34);
+            border-color: #38bdf8;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.28);
+        }
+
+        .select-box h4 {
+            font-size: 0.92rem;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .select-box p {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .chip {
+            background: rgba(0, 0, 0, 0.38);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 5px 10px;
+            border-radius: 9px;
+            font-size: 0.75rem;
+            color: #e2f0ff;
+        }
+
+        .btn-primary {
+            width: 100%;
+            max-width: 320px;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: #ffffff;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 15px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 8px 22px rgba(37, 99, 235, 0.5);
+            transition: transform 0.12s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            border: 1.5px solid rgba(255, 255, 255, 0.28);
+            padding: 11px 20px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.12s, background 0.15s;
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.97);
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .edu-badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.2);
+            border: 1.5px solid #38bdf8;
+            color: #7dd3fc;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .edu-fact-box {
+            background: rgba(37, 99, 235, 0.2);
+            border-left: 4px solid #38bdf8;
+            padding: 12px 14px;
+            border-radius: 12px;
+            text-align: left;
+            margin-bottom: 16px;
+            font-size: 0.94rem;
+            line-height: 1.45;
+            color: #f0f7ff;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 12px;
+            padding: 8px 6px;
+        }
+
+        .stat-item span {
+            display: block;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        .stat-item strong {
+            font-size: 1.15rem;
+            color: #38bdf8;
+        }
+
+        @media (max-height: 450px) {
+            .t-btn { min-width: 60px; min-height: 60px; }
+            .t-btn-jump { min-width: 72px; min-height: 72px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-shell">
+        <!-- HUD Superior -->
+        <div id="hud">
+            <div class="hud-group">
+                <div class="hud-pill hud-stage-tag" id="hud-stage">Fase 1: Quebrando Tabus</div>
+                <div class="hud-pill" id="hud-lives">❤️ ∞</div>
+                <div class="hud-pill">
+                    <!-- SVG Laço Azul Royal -->
+                    <svg class="ribbon-svg-icon" viewBox="0 0 32 36" fill="none">
+                        <path d="M16 4C11 4 8 8 8 13C8 17 11 20 16 24L9 33L13 35L16 28L19 35L23 33L16 24C21 20 24 17 24 13C24 8 21 4 16 4ZM16 8C18.5 8 20 10 20 13C20 15.5 18.2 17.6 16 19.6C13.8 17.6 12 15.5 12 13C12 10 13.5 8 16 8Z" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5"/>
+                    </svg>
+                    <span id="hud-ribbons">0</span>
+                </div>
+                <div class="hud-pill">⭐ <span id="hud-score">0</span></div>
+                <div class="hud-pill" id="hud-timer-box" style="display: none;">⏱️ <span id="hud-timer">00:00</span></div>
+            </div>
+
+            <div class="hud-group">
+                <button class="hud-btn" id="btn-toggle-touch" title="Mostrar/Ocultar Controles Táteis">🎮</button>
+                <button class="hud-btn" id="btn-mute" title="Ativar/Desativar Som">🔊</button>
+                <button class="hud-btn" id="btn-hud-menu" title="Voltar ao Menu Principal">🏠 Menu</button>
+            </div>
+        </div>
+
+        <!-- Canvas do Mundo Plataforma -->
+        <canvas id="worldCanvas"></canvas>
+
+        <!-- Controles Táteis Multi-Touch para Celular -->
+        <div id="touch-controls">
+            <div class="dpad-group">
+                <button class="t-btn" id="btn-left" aria-label="Esquerda">
+                    <span class="ico">⬅️</span>
+                    <span>ESQ</span>
+                </button>
+                <button class="t-btn" id="btn-right" aria-label="Direita">
+                    <span class="ico">➡️</span>
+                    <span>DIR</span>
+                </button>
+            </div>
+            <div class="action-group">
+                <button class="t-btn t-btn-jump" id="btn-jump" aria-label="Pular">
+                    <span class="ico">⬆️</span>
+                    <span>PULAR</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA INICIAL (MENU PRINCIPAL) -->
+        <div id="screen-menu" class="overlay">
+            <div class="card-modal">
+                <div class="hero-ribbon-wrap">
+                    <svg width="52" height="58" viewBox="0 0 32 36" fill="none">
+                        <path d="M16 4C11 4 8 8 8 13C8 17 11 20 16 24L9 33L13 35L16 28L19 35L23 33L16 24C21 20 24 17 24 13C24 8 21 4 16 4ZM16 8C18.5 8 20 10 20 13C20 15.5 18.2 17.6 16 19.6C13.8 17.6 12 15.5 12 13C12 10 13.5 8 16 8Z" fill="#2563eb" stroke="#7dd3fc" stroke-width="1.6"/>
+                    </svg>
+                </div>
+                <h1 class="modal-title">Missão Saúde: Novembro Azul</h1>
+                <p class="modal-subtitle">
+                    Explore o mundo estilo plataforma clássico, bata nos blocos <strong>[?]</strong>, colete os <strong>Laços Azuis</strong>, derrote o <strong>Chefão Final</strong> pulando 3 vezes na cabeça dele e conquiste a bandeira!
+                </p>
+
+                <div class="section-label">1. Escolha o Modo de Jogo</div>
+                <div class="grid-2" id="mode-selector">
+                    <div class="select-box active" data-mode="presentation">
+                        <h4>🎤 Modo Apresentação</h4>
+                        <p>Vidas infinitas e retorno seguro ao cair. Perfeito para demonstrar ao vivo no CIEE!</p>
+                    </div>
+                    <div class="select-box" data-mode="challenge">
+                        <h4>🔥 Modo Desafio</h4>
+                        <p>3 vidas, cronômetro ativo e bônus de pontos por agilidade e chefões derrotados.</p>
+                    </div>
+                </div>
+
+                <div class="section-label">2. Escolha a Fase</div>
+                <div class="grid-2" id="stage-selector">
+                    <div class="select-box active" data-stage="0">
+                        <h4>🏙️ Fase 1: Quebrando Tabus</h4>
+                        <p>Enfrente o vilão <strong>Sr. Preconceito</strong> antes da bandeira azul!</p>
+                    </div>
+                    <div class="select-box" data-stage="1">
+                        <h4>⛰️ Fase 2: Caminho da Prevenção</h4>
+                        <p>Desafios aéreos e duelo final contra o <strong>Dr. Desinformação</strong>!</p>
+                    </div>
+                </div>
+
+                <div class="controls-bar">
+                    <div class="chip">💻 PC: <strong>Setas / A-D</strong> mover • <strong>Espaço / W / ⬆️</strong> pular (2x)</div>
+                    <div class="chip">📱 Celular: <strong>Toque simultâneo</strong> nos botões (toque <strong>🎮</strong> para testar no PC)</div>
+                </div>
+
+                <button class="btn-primary" id="btn-start-game">▶ Jogar Missão</button>
+            </div>
+        </div>
+
+        <!-- CARD EDUCATIVO AO BATER NO BLOCO (?) -->
+        <div id="screen-edu" class="overlay hidden">
+            <div class="card-modal">
+                <div class="edu-badge" id="edu-tag">💡 Você Sabia? • +250 pts</div>
+                <h2 class="modal-title" id="edu-title">Informação Salva Vidas</h2>
+                <div class="edu-fact-box" id="edu-body">
+                    Texto educativo aqui.
+                </div>
+                <button class="btn-primary" id="btn-edu-continue">Continuar Aventura ➡️</button>
+            </div>
+        </div>
+
+        <!-- TELA DE VITÓRIA / FASE CONCLUÍDA -->
+        <div id="screen-victory" class="overlay hidden">
+            <div class="card-modal">
+                <div class="hero-ribbon-wrap">
+                    <svg width="52" height="58" viewBox="0 0 32 36" fill="none">
+                        <path d="M16 4C11 4 8 8 8 13C8 17 11 20 16 24L9 33L13 35L16 28L19 35L23 33L16 24C21 20 24 17 24 13C24 8 21 4 16 4ZM16 8C18.5 8 20 10 20 13C20 15.5 18.2 17.6 16 19.6C13.8 17.6 12 15.5 12 13C12 10 13.5 8 16 8Z" fill="#2563eb" stroke="#7dd3fc" stroke-width="1.6"/>
+                    </svg>
+                </div>
+                <h1 class="modal-title" id="victory-title">Fase Concluída!</h1>
+                <p class="modal-subtitle" id="victory-subtitle">
+                    Você derrotou o vilão dos tabus e levou a mensagem da prevenção até a bandeira azul!
+                </p>
+
+                <div class="stats-row">
+                    <div class="stat-item"><span>PONTUAÇÃO</span><strong id="win-score">0</strong></div>
+                    <div class="stat-item"><span>LAÇOS AZUIS</span><strong id="win-ribbons">0</strong></div>
+                    <div class="stat-item"><span>MITOS VENCIDOS</span><strong id="win-enemies">0</strong></div>
+                </div>
+
+                <div class="edu-fact-box" style="text-align: center; border-left: none; border: 1.5px solid #38bdf8;">
+                    💙 <strong>Mensagem Novembro Azul:</strong> Cuidar da saúde também é coisa de homem. O diagnóstico precoce garante até <strong>90% de chance de cura</strong>!
+                </div>
+
+                <div class="btn-stack">
+                    <button class="btn-primary" id="btn-next-stage">Próxima Fase ➡️</button>
+                    <button class="btn-secondary" id="btn-victory-replay">🔄 Jogar Fase Novamente</button>
+                    <button class="btn-secondary" id="btn-victory-menu">🏠 Voltar ao Menu (Trocar Modo)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA DE GAME OVER (MODO DESAFIO) -->
+        <div id="screen-gameover" class="overlay hidden">
+            <div class="card-modal">
+                <div class="hero-ribbon-wrap">
+                    <svg width="48" height="54" viewBox="0 0 32 36" fill="none">
+                        <path d="M16 4C11 4 8 8 8 13C8 17 11 20 16 24L9 33L13 35L16 28L19 35L23 33L16 24C21 20 24 17 24 13C24 8 21 4 16 4ZM16 8C18.5 8 20 10 20 13C20 15.5 18.2 17.6 16 19.6C13.8 17.6 12 15.5 12 13C12 10 13.5 8 16 8Z" fill="#2563eb" stroke="#7dd3fc" stroke-width="1.6"/>
+                    </svg>
+                </div>
+                <h1 class="modal-title">Não Desista da Prevenção!</h1>
+                <p class="modal-subtitle">
+                    No Modo Desafio suas 3 vidas acabaram. Tente novamente ou volte ao menu para jogar no Modo Apresentação!
+                </p>
+                <div class="btn-stack">
+                    <button class="btn-primary" id="btn-retry-stage">🔄 Tentar Novamente</button>
+                    <button class="btn-secondary" id="btn-gameover-menu">🏠 Voltar ao Menu Principal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * MISSÃO SAÚDE: NOVEMBRO AZUL — PLATAFORMA 2D CLÁSSICO (ESTILO MARIO BROS.)
+         * Sistema de Coordenadas Virtuais Fixo no Eixo Y (WORLD_HEIGHT = 450, GROUND_Y = 380)
+         * para alinhamento 100% preciso em qualquer celular (retrato/paisagem) ou PC.
+         */
+        const canvas = document.getElementById('worldCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Constantes do Mundo Virtual (garantem física idêntica em qualquer resolução)
+        const WORLD_HEIGHT = 450;
+        const GROUND_Y = 380;
+        const TILE = 42;
+
+        // ==========================================
+        // 1. ÁUDIO RETRO SINTETIZADO (WEB AUDIO API)
+        // ==========================================
+        class RetroAudio {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                document.getElementById('btn-mute').textContent = this.muted ? '🔇' : '🔊';
+            }
+
+            tone(freq, type, duration, vol = 0.09, slideFreq = null, delay = 0) {
+                if (this.muted) return;
+                try {
+                    this.init();
+                    const start = this.ctx.currentTime + delay;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, start);
+                    if (slideFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(slideFreq, start + duration);
+                    }
+                    gain.gain.setValueAtTime(vol, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + duration);
+                } catch (e) {}
+            }
+
+            playJump(isDouble = false) {
+                this.tone(isDouble ? 360 : 250, 'square', 0.15, 0.08, isDouble ? 720 : 580);
+            }
+
+            playBlockHit() {
+                this.tone(440, 'square', 0.08, 0.09);
+                this.tone(880, 'triangle', 0.16, 0.1, null, 0.05);
+            }
+
+            playBump() {
+                this.tone(135, 'triangle', 0.1, 0.09, 85);
+            }
+
+            playRibbon() {
+                this.tone(987.77, 'sine', 0.08, 0.09);
+                this.tone(1318.51, 'sine', 0.18, 0.09, null, 0.07);
+            }
+
+            playPowerUp() {
+                [330, 392, 659, 523, 587, 784].forEach((n, i) => this.tone(n, 'triangle', 0.12, 0.09, null, i * 0.055));
+            }
+
+            playStomp() {
+                this.tone(320, 'square', 0.07, 0.1, 140);
+                this.tone(540, 'sine', 0.12, 0.09, 760, 0.05);
+            }
+
+            playBossHit() {
+                this.tone(220, 'sawtooth', 0.12, 0.12, 110);
+                this.tone(480, 'square', 0.18, 0.1, 660, 0.08);
+            }
+
+            playBossDefeat() {
+                [300, 400, 500, 650, 880, 1100].forEach((n, i) => this.tone(n, 'square', 0.14, 0.11, null, i * 0.07));
+            }
+
+            playHurt() {
+                this.tone(280, 'sawtooth', 0.14, 0.11, 110);
+                this.tone(180, 'sawtooth', 0.22, 0.11, 75, 0.12);
+            }
+
+            playFlagVictory() {
+                const melody = [
+                    { f: 523.25, d: 0.14, t: 0.00 },
+                    { f: 659.25, d: 0.14, t: 0.14 },
+                    { f: 783.99, d: 0.14, t: 0.28 },
+                    { f: 1046.50, d: 0.28, t: 0.42 },
+                    { f: 783.99, d: 0.14, t: 0.72 },
+                    { f: 1046.50, d: 0.45, t: 0.88 }
+                ];
+                melody.forEach(m => this.tone(m.f, 'triangle', m.d, 0.12, null, m.t));
+            }
+        }
+
+        const sfx = new RetroAudio();
+
+        function vibrate(pattern) {
+            try {
+                if (navigator.vibrate) navigator.vibrate(pattern);
+            } catch (e) {}
+        }
+
+        // ==========================================
+        // 2. CONTEÚDO EDUCATIVO NOVEMBRO AZUL
+        // ==========================================
+        const EDU_CARDS = [
+            {
+                title: "Quebrando o Tabu do Exame",
+                body: "O exame clínico dura apenas alguns segundos, é rápido, indolor e fundamental junto ao exame de sangue (PSA) para avaliar a próstata com precisão. Preconceito não protege ninguém!"
+            },
+            {
+                title: "Quando Começar a Prevenção?",
+                body: "A Sociedade Brasileira de Urologia recomenda conversar com o urologista a partir dos <strong>50 anos</strong> — ou a partir dos <strong>45 anos</strong> para homens negros ou com histórico familiar da doença."
+            },
+            {
+                title: "90% de Chance de Cura!",
+                body: "Na fase inicial, o câncer de próstata geralmente não provoca sintomas. Quando descoberto precocemente em exames de rotina, as chances de cura chegam a <strong>90%</strong>."
+            },
+            {
+                title: "Hábitos que Protegem",
+                body: "Praticar atividade física regular, manter alimentação rica em frutas e verduras, controlar o peso e evitar o cigarro reduzem significativamente os riscos à saúde masculina."
+            },
+            {
+                title: "Saúde Integral do Homem",
+                body: "O Novembro Azul também incentiva cuidar da pressão arterial, diabetes, saúde mental e consultas médicas periódicas. Cuidar de si é um ato de coragem e amor próprio."
+            }
+        ];
+
+        // ==========================================
+        // 3. DESIGN DE FASES COM ALTURAS 100% ALCANÇÁVEIS
+        // ==========================================
+        // Referência exata de alturas no mundo virtual (GROUND_Y = 380):
+        // - Pulo normal do jogador alcança ~128px de altura; Pulo duplo alcança ~215px!
+        // - Blocos flutuantes ficam a 95px acima do chão (GROUND_Y - 95 - TILE) -> fácil bater a cabeça por baixo!
+        // - Canos ficam apoiados no chão (y + h === GROUND_Y) com altura de 58px ou 80px -> fácil pular por cima!
+        // - Laços sobre blocos ficam a 155px acima do chão -> alcançáveis pulando de cima dos blocos ou com pulo duplo!
+
+        const STAGES = [
+            {
+                id: 0,
+                name: "Fase 1: Quebrando Tabus",
+                skyTop: "#1565c0",
+                skyBottom: "#81d4fa",
+                groundColor: "#8d4925",
+                grassColor: "#2ecc71",
+                lengthTiles: 96,
+                flagX: 91 * TILE,
+                pits: [
+                    { start: 26, end: 28 },
+                    { start: 53, end: 55 }
+                ],
+                // Canos sempre apoiados no chão (GROUND_Y)
+                pipes: [
+                    { tx: 17, w: 56, h: 58 },
+                    { tx: 39, w: 56, h: 78 },
+                    { tx: 61, w: 56, h: 64 }
+                ],
+                // Blocos a 95px acima do chão (altoY = 95) ou 175px (altoY = 175)
+                blocks: [
+                    { tx: 8, aboveGround: 95, type: 'brick' },
+                    { tx: 9, aboveGround: 95, type: 'question', reward: 'edu', eduIdx: 0 },
+                    { tx: 10, aboveGround: 95, type: 'brick' },
+                    { tx: 11, aboveGround: 95, type: 'question', reward: 'ribbon' },
+                    { tx: 12, aboveGround: 95, type: 'brick' },
+
+                    { tx: 22, aboveGround: 95, type: 'question', reward: 'edu', eduIdx: 1 },
+                    { tx: 23, aboveGround: 95, type: 'brick' },
+
+                    { tx: 31, aboveGround: 95, type: 'brick' },
+                    { tx: 32, aboveGround: 95, type: 'question', reward: 'shield' },
+                    { tx: 33, aboveGround: 95, type: 'brick' },
+                    { tx: 32, aboveGround: 185, type: 'question', reward: 'edu', eduIdx: 2 },
+
+                    { tx: 45, aboveGround: 95, type: 'brick' },
+                    { tx: 46, aboveGround: 95, type: 'question', reward: 'ribbon' },
+                    { tx: 47, aboveGround: 95, type: 'brick' },
+
+                    { tx: 57, aboveGround: 95, type: 'question', reward: 'edu', eduIdx: 3 },
+                    { tx: 66, aboveGround: 95, type: 'brick' },
+                    { tx: 67, aboveGround: 95, type: 'question', reward: 'ribbon' },
+                    { tx: 68, aboveGround: 95, type: 'brick' }
+                ],
+                enemies: [
+                    { tx: 14, label: "Tabu", color: "#e53935", minTx: 11, maxTx: 16 },
+                    { tx: 35, label: "Medo", color: "#8e24aa", minTx: 30, maxTx: 38 },
+                    { tx: 48, label: "Fake News", color: "#d81b60", minTx: 42, maxTx: 51 },
+                    { tx: 66, label: "Preconceito", color: "#e53935", minTx: 63, maxTx: 70 }
+                ],
+                // Laços Azuis em alturas fáceis (45px do chão ou 155px sobre os blocos)
+                ribbons: [
+                    { tx: 5, aboveGround: 42 }, { tx: 6, aboveGround: 42 },
+                    { tx: 9, aboveGround: 155 }, { tx: 10, aboveGround: 155 }, { tx: 11, aboveGround: 155 },
+                    { tx: 27, aboveGround: 95 },
+                    { tx: 35, aboveGround: 42 }, { tx: 36, aboveGround: 42 },
+                    { tx: 45, aboveGround: 155 }, { tx: 46, aboveGround: 155 }, { tx: 47, aboveGround: 155 },
+                    { tx: 54, aboveGround: 95 },
+                    { tx: 66, aboveGround: 155 }, { tx: 67, aboveGround: 155 }, { tx: 68, aboveGround: 155 }
+                ],
+                boss: {
+                    name: "Sr. Preconceito",
+                    title: "Vilão dos Tabus",
+                    x: 82 * TILE,
+                    minX: 73 * TILE,
+                    maxX: 86 * TILE,
+                    hp: 3,
+                    coatColor: "#1e1b4b",
+                    hatColor: "#312e81",
+                    projectileLabel: "MITO!"
+                }
+            },
+            {
+                id: 1,
+                name: "Fase 2: Caminho da Prevenção",
+                skyTop: "#0d47a1",
+                skyBottom: "#4fc3f7",
+                groundColor: "#6d4c41",
+                grassColor: "#00c853",
+                lengthTiles: 104,
+                flagX: 99 * TILE,
+                pits: [
+                    { start: 19, end: 21 },
+                    { start: 42, end: 44 },
+                    { start: 66, end: 68 }
+                ],
+                pipes: [
+                    { tx: 14, w: 56, h: 64 },
+                    { tx: 35, w: 56, h: 82 },
+                    { tx: 58, w: 56, h: 68 }
+                ],
+                blocks: [
+                    { tx: 7, aboveGround: 95, type: 'question', reward: 'shield' },
+                    { tx: 10, aboveGround: 95, type: 'brick' },
+                    { tx: 11, aboveGround: 95, type: 'question', reward: 'edu', eduIdx: 4 },
+                    { tx: 12, aboveGround: 95, type: 'brick' },
+
+                    { tx: 24, aboveGround: 95, type: 'brick' },
+                    { tx: 25, aboveGround: 95, type: 'question', reward: 'ribbon' },
+                    { tx: 26, aboveGround: 95, type: 'brick' },
+                    { tx: 25, aboveGround: 185, type: 'question', reward: 'edu', eduIdx: 1 },
+
+                    { tx: 47, aboveGround: 95, type: 'question', reward: 'edu', eduIdx: 2 },
+                    { tx: 51, aboveGround: 95, type: 'brick' },
+                    { tx: 52, aboveGround: 95, type: 'question', reward: 'shield' },
+                    { tx: 53, aboveGround: 95, type: 'brick' },
+
+                    { tx: 71, aboveGround: 95, type: 'brick' },
+                    { tx: 72, aboveGround: 95, type: 'question', reward: 'edu', eduIdx: 0 },
+                    { tx: 73, aboveGround: 95, type: 'question', reward: 'ribbon' },
+                    { tx: 74, aboveGround: 95, type: 'brick' }
+                ],
+                enemies: [
+                    { tx: 11, label: "Sedentarismo", color: "#d84315", minTx: 8, maxTx: 13 },
+                    { tx: 30, label: "Adiamento", color: "#8e24aa", minTx: 23, maxTx: 34 },
+                    { tx: 52, label: "Fake News", color: "#ad1457", minTx: 46, maxTx: 56 },
+                    { tx: 73, label: "Tabu", color: "#e53935", minTx: 70, maxTx: 77 }
+                ],
+                ribbons: [
+                    { tx: 4, aboveGround: 42 }, { tx: 5, aboveGround: 42 },
+                    { tx: 20, aboveGround: 95 },
+                    { tx: 24, aboveGround: 155 }, { tx: 26, aboveGround: 155 },
+                    { tx: 43, aboveGround: 95 },
+                    { tx: 51, aboveGround: 155 }, { tx: 52, aboveGround: 155 }, { tx: 53, aboveGround: 155 },
+                    { tx: 67, aboveGround: 95 },
+                    { tx: 71, aboveGround: 155 }, { tx: 72, aboveGround: 155 }, { tx: 73, aboveGround: 155 }, { tx: 74, aboveGround: 155 }
+                ],
+                boss: {
+                    name: "Dr. Desinformação",
+                    title: "Vilão das Fake News",
+                    x: 90 * TILE,
+                    minX: 80 * TILE,
+                    maxX: 94 * TILE,
+                    hp: 3,
+                    coatColor: "#3b0764",
+                    hatColor: "#581c87",
+                    projectileLabel: "BOATO!"
+                }
+            }
+        ];
+
+        // ==========================================
+        // 4. ESTADO DO JOGO E VIEWPORT ESCALADO
+        // ==========================================
+        const state = {
+            screen: 'MENU', // MENU, PLAYING, EDU_CARD, FLAG_SLIDE, VICTORY, GAMEOVER
+            mode: 'presentation',
+            stageIndex: 0,
+            lives: 3,
+            score: 0,
+            ribbonsCollected: 0,
+            enemiesDefeated: 0,
+            elapsedSeconds: 0,
+            cameraX: 0,
+            scale: 1,
+            viewW: 800,
+            flagAnimY: 0,
+            flagReached: false
+        };
+
+        const player = {
+            x: 80,
+            y: 200,
+            w: 30,
+            h: 42,
+            vx: 0,
+            vy: 0,
+            facing: 1,
+            grounded: false,
+            jumpsUsed: 0,
+            maxJumps: 2,
+            hasShield: false,
+            invulnTimer: 0,
+            animTime: 0,
+            lastSafeX: 80,
+            lastSafeY: 200
+        };
+
+        let worldSolids = []; // Canos + Blocos sólidos
+        let worldEnemies = [];
+        let worldRibbons = [];
+        let boss = null;
+        let bossProjectiles = [];
+        let particles = [];
+        let popups = [];
+        let clouds = [];
+        let hills = [];
+
+        // ==========================================
+        // 5. REDIMENSIONAMENTO PROPORCIONAL (SEM BUGS DE ALTURA)
+        // ==========================================
+        function resizeWorld() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+            canvas.width = Math.floor(w * dpr);
+            canvas.height = Math.floor(h * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Escala o mundo virtual (altura 450px) para preencher exatamente a altura da tela
+            state.scale = h / WORLD_HEIGHT;
+            state.viewW = w / state.scale;
+        }
+
+        window.addEventListener('resize', resizeWorld);
+        window.addEventListener('orientationchange', () => setTimeout(resizeWorld, 120));
+
+        // ==========================================
+        // 6. INICIALIZAÇÃO DE FASE, CANOS, BLOCOS E CHEFÃO
+        // ==========================================
+        function startStage(stageIdx, keepProgress = false) {
+            sfx.init();
+            resizeWorld();
+
+            state.stageIndex = stageIdx;
+            if (!keepProgress) {
+                state.score = 0;
+                state.ribbonsCollected = 0;
+                state.enemiesDefeated = 0;
+                state.elapsedSeconds = 0;
+                state.lives = state.mode === 'presentation' ? 99 : 3;
+            }
+
+            const stage = STAGES[stageIdx];
+            state.cameraX = 0;
+            state.flagReached = false;
+            state.flagAnimY = 0;
+
+            player.x = 2.5 * TILE;
+            player.y = GROUND_Y - player.h;
+            player.vx = 0;
+            player.vy = 0;
+            player.facing = 1;
+            player.grounded = true;
+            player.jumpsUsed = 0;
+            player.invulnTimer = 0;
+            player.lastSafeX = player.x;
+            player.lastSafeY = player.y;
+            if (!keepProgress) player.hasShield = false;
+
+            worldSolids = [];
+
+            // 1. Adiciona Canos apoiados EXATAMENTE no chão (GROUND_Y)
+            stage.pipes.forEach(p => {
+                worldSolids.push({
+                    x: p.tx * TILE,
+                    y: GROUND_Y - p.h,
+                    w: p.w,
+                    h: p.h,
+                    type: 'pipe',
+                    used: false,
+                    bounceOffset: 0
+                });
+            });
+
+            // 2. Adiciona Blocos flutuantes na altura exata para bater por baixo
+            stage.blocks.forEach(b => {
+                worldSolids.push({
+                    x: b.tx * TILE,
+                    y: GROUND_Y - b.aboveGround - TILE,
+                    w: TILE,
+                    h: TILE,
+                    type: b.type,
+                    reward: b.reward || null,
+                    eduIdx: b.eduIdx ?? 0,
+                    used: false,
+                    bounceOffset: 0
+                });
+            });
+
+            // 3. Adiciona Inimigos comuns patrulhando o chão
+            worldEnemies = stage.enemies.map(e => ({
+                x: e.tx * TILE,
+                y: GROUND_Y - 34,
+                w: 36,
+                h: 34,
+                vx: -72,
+                minX: e.minTx * TILE,
+                maxX: e.maxTx * TILE,
+                label: e.label,
+                color: e.color,
+                alive: true,
+                squishTimer: 0,
+                walkAnim: 0
+            }));
+
+            // 4. Adiciona Laços Azuis colecionáveis
+            worldRibbons = stage.ribbons.map(r => ({
+                x: r.tx * TILE + 6,
+                y: GROUND_Y - r.aboveGround - 30,
+                w: 30,
+                h: 30,
+                collected: false,
+                bobOffset: Math.random() * Math.PI * 2
+            }));
+
+            // 5. Inicializa o VILÃO CHEFÃO antes da bandeira
+            const bCfg = stage.boss;
+            boss = {
+                name: bCfg.name,
+                title: bCfg.title,
+                x: bCfg.x,
+                y: GROUND_Y - 72,
+                w: 56,
+                h: 72,
+                vx: -95,
+                vy: 0,
+                minX: bCfg.minX,
+                maxX: bCfg.maxX,
+                hp: bCfg.hp,
+                maxHp: bCfg.hp,
+                coatColor: bCfg.coatColor,
+                hatColor: bCfg.hatColor,
+                projectileLabel: bCfg.projectileLabel,
+                alive: true,
+                hurtTimer: 0,
+                jumpCooldown: 2.2,
+                shootCooldown: 2.6
+            };
+
+            bossProjectiles = [];
+            particles = [];
+            popups = [];
+
+            // Cenário decorativo
+            clouds = [];
+            for (let i = 0; i < 25; i++) {
+                clouds.push({
+                    x: i * 220 + Math.random() * 80,
+                    y: 42 + Math.random() * 90,
+                    scale: 0.72 + Math.random() * 0.5,
+                    speed: 10 + Math.random() * 10
+                });
+            }
+
+            hills = [];
+            for (let i = 0; i < 24; i++) {
+                hills.push({
+                    x: i * 260,
+                    w: 150 + (i % 3) * 40,
+                    h: 60 + (i % 2) * 30
+                });
+            }
+
+            hideAllOverlays();
+            state.screen = 'PLAYING';
+            updateHUD();
+        }
+
+        function goToMenu() {
+            state.screen = 'MENU';
+            input.left = false;
+            input.right = false;
+            hideAllOverlays();
+            document.getElementById('screen-menu').classList.remove('hidden');
+            resizeWorld();
+        }
+
+        function hideAllOverlays() {
+            document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+        }
+
+        function updateHUD() {
+            const stage = STAGES[state.stageIndex];
+            document.getElementById('hud-stage').textContent = stage.name;
+            document.getElementById('hud-lives').textContent =
+                state.mode === 'presentation' ? '❤️ ∞' : `❤️ ${Math.max(0, state.lives)}`;
+            document.getElementById('hud-ribbons').textContent = state.ribbonsCollected;
+            document.getElementById('hud-score').textContent = state.score;
+
+            const timerBox = document.getElementById('hud-timer-box');
+            if (state.mode === 'challenge') {
+                timerBox.style.display = 'flex';
+                const mins = String(Math.floor(state.elapsedSeconds / 60)).padStart(2, '0');
+                const secs = String(Math.floor(state.elapsedSeconds % 60)).padStart(2, '0');
+                document.getElementById('hud-timer').textContent = `${mins}:${secs}`;
+            } else {
+                timerBox.style.display = 'none';
+            }
+        }
+
+        // ==========================================
+        // 7. CONTROLES (TECLADO + MULTI-TOUCH REAL)
+        // ==========================================
+        const input = {
+            left: false,
+            right: false,
+            jumpHeld: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') input.right = true;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                if (!input.jumpHeld && state.screen === 'PLAYING') {
+                    triggerJump();
+                }
+                input.jumpHeld = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') input.right = false;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                input.jumpHeld = false;
+            }
+        });
+
+        function triggerJump() {
+            if (player.jumpsUsed < player.maxJumps) {
+                const isDouble = player.jumpsUsed > 0;
+                player.vy = isDouble ? -490 : -560; // Pulo 1 alcança ~128px; Pulo 2 alcança ~215px
+                player.grounded = false;
+                player.jumpsUsed++;
+                sfx.playJump(isDouble);
+                vibrate(14);
+                spawnParticles(player.x + player.w / 2, player.y + player.h, isDouble ? '#38bdf8' : '#ffffff', 7);
+            }
+        }
+
+        // Gerenciador Multi-Touch independente por dedo (permite andar e pular juntos no celular!)
+        const activeTouches = new Map();
+
+        function updateTouchStates() {
+            let leftActive = false;
+            let rightActive = false;
+            let jumpActive = false;
+
+            activeTouches.forEach(btnId => {
+                if (btnId === 'btn-left') leftActive = true;
+                if (btnId === 'btn-right') rightActive = true;
+                if (btnId === 'btn-jump') jumpActive = true;
+            });
+
+            input.left = leftActive;
+            input.right = rightActive;
+
+            document.getElementById('btn-left').classList.toggle('pressed', leftActive);
+            document.getElementById('btn-right').classList.toggle('pressed', rightActive);
+            document.getElementById('btn-jump').classList.toggle('pressed', jumpActive);
+        }
+
+        ['btn-left', 'btn-right', 'btn-jump'].forEach(btnId => {
+            const el = document.getElementById(btnId);
+
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    activeTouches.set(e.changedTouches[i].identifier, btnId);
+                }
+                updateTouchStates();
+                if (btnId === 'btn-jump' && state.screen === 'PLAYING') {
+                    triggerJump();
+                }
+            }, { passive: false });
+
+            const endTouch = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    activeTouches.delete(e.changedTouches[i].identifier);
+                }
+                updateTouchStates();
+            };
+
+            el.addEventListener('touchend', endTouch, { passive: false });
+            el.addEventListener('touchcancel', endTouch, { passive: false });
+
+            // Fallback de mouse para teste no computador
+            el.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                activeTouches.set('mouse', btnId);
+                updateTouchStates();
+                if (btnId === 'btn-jump' && state.screen === 'PLAYING') triggerJump();
+            });
+            el.addEventListener('mouseup', () => {
+                activeTouches.delete('mouse');
+                updateTouchStates();
+            });
+            el.addEventListener('mouseleave', () => {
+                activeTouches.delete('mouse');
+                updateTouchStates();
+            });
+        });
+
+        document.getElementById('btn-toggle-touch').addEventListener('click', () => {
+            const isFine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+            if (isFine) {
+                document.body.classList.toggle('show-touch');
+            } else {
+                document.body.classList.toggle('hide-touch');
+            }
+        });
+
+        // ==========================================
+        // 8. COLISÕES AABB, BLOCOS (?) E CHEFÃO
+        // ==========================================
+        function isOverPit(centerX) {
+            const stage = STAGES[state.stageIndex];
+            const tileX = Math.floor(centerX / TILE);
+            return stage.pits.some(p => tileX >= p.start && tileX <= p.end);
+        }
+
+        function aabb(a, b) {
+            return (
+                a.x < b.x + b.w &&
+                a.x + a.w > b.x &&
+                a.y < b.y + b.h &&
+                a.y + a.h > b.y
+            );
+        }
+
+        function hitQuestionBlock(block) {
+            block.bounceOffset = -10;
+            if (block.used) {
+                sfx.playBump();
+                return;
+            }
+
+            block.used = true;
+            sfx.playBlockHit();
+            vibrate([20, 25, 30]);
+            spawnParticles(block.x + block.w / 2, block.y, '#38bdf8', 14);
+
+            if (block.reward === 'ribbon') {
+                state.ribbonsCollected++;
+                state.score += 150;
+                sfx.playRibbon();
+                addPopup('+150 Laço Azul!', block.x + block.w / 2, block.y - 12, '#38bdf8');
+                updateHUD();
+            } else if (block.reward === 'shield') {
+                player.hasShield = true;
+                state.score += 200;
+                sfx.playPowerUp();
+                addPopup('🛡️ Escudo Azul Ativo!', block.x + block.w / 2, block.y - 12, '#00e676');
+                updateHUD();
+            } else if (block.reward === 'edu') {
+                state.score += 250;
+                updateHUD();
+                openEduCard(block.eduIdx);
+            }
+        }
+
+        function openEduCard(eduIdx) {
+            const card = EDU_CARDS[eduIdx % EDU_CARDS.length];
+            activeTouches.clear();
+            updateTouchStates();
+            state.screen = 'EDU_CARD';
+
+            document.getElementById('edu-title').textContent = card.title;
+            document.getElementById('edu-body').innerHTML = card.body;
+            document.getElementById('screen-edu').classList.remove('hidden');
+        }
+
+        document.getElementById('btn-edu-continue').addEventListener('click', () => {
+            document.getElementById('screen-edu').classList.add('hidden');
+            state.screen = 'PLAYING';
+        });
+
+        function handlePlayerDamage(reasonText) {
+            if (player.invulnTimer > 0) return;
+
+            if (player.hasShield) {
+                player.hasShield = false;
+                player.invulnTimer = 1.6;
+                sfx.playHurt();
+                vibrate(45);
+                addPopup('🛡️ Escudo protegeu você!', player.x + player.w / 2, player.y - 12, '#38bdf8');
+                return;
+            }
+
+            sfx.playHurt();
+            vibrate(70);
+            player.invulnTimer = 1.6;
+
+            if (state.mode === 'presentation') {
+                addPopup(`💡 Supere: ${reasonText}`, player.x + player.w / 2, player.y - 14, '#ffbe0b');
+            } else {
+                state.lives--;
+                updateHUD();
+                addPopup(`-1 Vida (${reasonText})`, player.x + player.w / 2, player.y - 14, '#ff3b5c');
+                if (state.lives <= 0) {
+                    state.screen = 'GAMEOVER';
+                    document.getElementById('screen-gameover').classList.remove('hidden');
+                }
+            }
+        }
+
+        function spawnParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 60 + Math.random() * 160;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd - 60,
+                    size: 3 + Math.random() * 3.5,
+                    color,
+                    alpha: 1
+                });
+            }
+        }
+
+        function addPopup(text, x, y, color) {
+            popups.push({ text, x, y, color, alpha: 1, vy: -40 });
+        }
+
+        // ==========================================
+        // 9. ATUALIZAÇÃO DE FÍSICA E IA DO CHEFÃO
+        // ==========================================
+        function update(dt) {
+            clouds.forEach(c => {
+                c.x -= c.speed * dt;
+                if (c.x < -140) c.x = STAGES[state.stageIndex].lengthTiles * TILE + 100;
+            });
+
+            if (state.screen === 'FLAG_SLIDE') {
+                const poleBottom = GROUND_Y - 22;
+                if (state.flagAnimY < poleBottom - 54) {
+                    state.flagAnimY += 210 * dt;
+                }
+                if (player.y + player.h < GROUND_Y) {
+                    player.y = Math.min(GROUND_Y - player.h, player.y + 190 * dt);
+                } else if (!state.flagReached) {
+                    state.flagReached = true;
+                    setTimeout(showVictoryModal, 420);
+                }
+                updateEffects(dt);
+                return;
+            }
+
+            if (state.screen !== 'PLAYING') return;
+
+            const stage = STAGES[state.stageIndex];
+            if (state.mode === 'challenge') {
+                state.elapsedSeconds += dt;
+                updateHUD();
+            }
+
+            if (player.invulnTimer > 0) player.invulnTimer -= dt;
+
+            // Movimento Horizontal do Lucas
+            const runSpeed = 240;
+            if (input.left) {
+                player.vx = -runSpeed;
+                player.facing = -1;
+            } else if (input.right) {
+                player.vx = runSpeed;
+                player.facing = 1;
+            } else {
+                player.vx = 0;
+            }
+
+            if (Math.abs(player.vx) > 0 && player.grounded) {
+                player.animTime += dt * 12;
+            } else {
+                player.animTime = 0;
+            }
+
+            // EIXO X: Move e resolve colisões laterais sem travar
+            player.x += player.vx * dt;
+            player.x = Math.max(12, Math.min(stage.lengthTiles * TILE - player.w - 12, player.x));
+
+            // Impede passar direto pela bandeira se o Chefão ainda estiver vivo!
+            if (boss && boss.alive && player.x + player.w > stage.flagX - 18) {
+                player.x = stage.flagX - 18 - player.w;
+                addPopup(`⚔️ Derrote ${boss.name} primeiro!`, boss.x, boss.y - 24, '#ffbe0b');
+            }
+
+            worldSolids.forEach(b => {
+                if (b.bounceOffset < 0) b.bounceOffset = Math.min(0, b.bounceOffset + 60 * dt);
+                if (aabb(player, b)) {
+                    if (player.vx > 0) player.x = b.x - player.w;
+                    else if (player.vx < 0) player.x = b.x + b.w;
+                }
+            });
+
+            // EIXO Y: Gravidade e colisões verticais
+            player.vy += 1260 * dt;
+            player.y += player.vy * dt;
+            player.grounded = false;
+
+            worldSolids.forEach(b => {
+                if (aabb(player, b)) {
+                    if (player.vy > 0) {
+                        player.y = b.y - player.h;
+                        player.vy = 0;
+                        player.grounded = true;
+                        player.jumpsUsed = 0;
+                        if (b.type === 'pipe') {
+                            player.lastSafeX = player.x;
+                            player.lastSafeY = player.y;
+                        }
+                    } else if (player.vy < 0) {
+                        player.y = b.y + b.h;
+                        player.vy = 45;
+                        if (b.type === 'question') {
+                            hitQuestionBlock(b);
+                        } else {
+                            sfx.playBump();
+                        }
+                    }
+                }
+            });
+
+            // Colisão com o Chão (GROUND_Y)
+            const centerFootX = player.x + player.w / 2;
+            if (player.y + player.h >= GROUND_Y && player.vy >= 0 && !isOverPit(centerFootX)) {
+                if (player.y + player.h <= GROUND_Y + 26) {
+                    player.y = GROUND_Y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                    player.jumpsUsed = 0;
+                    if (!isOverPit(centerFootX - 32) && !isOverPit(centerFootX + 32)) {
+                        player.lastSafeX = player.x;
+                        player.lastSafeY = player.y;
+                    }
+                }
+            }
+
+            // Caiu no buraco
+            if (player.y > WORLD_HEIGHT + 40) {
+                sfx.playHurt();
+                vibrate(65);
+                if (state.mode === 'presentation') {
+                    player.x = player.lastSafeX;
+                    player.y = player.lastSafeY - 16;
+                    player.vy = 0;
+                    player.jumpsUsed = 0;
+                    player.invulnTimer = 1.2;
+                    addPopup('🔄 Retorno Seguro!', player.x + player.w / 2, player.y - 10, '#38bdf8');
+                } else {
+                    state.lives--;
+                    updateHUD();
+                    if (state.lives <= 0) {
+                        state.screen = 'GAMEOVER';
+                        document.getElementById('screen-gameover').classList.remove('hidden');
+                        return;
+                    } else {
+                        player.x = player.lastSafeX;
+                        player.y = player.lastSafeY - 16;
+                        player.vy = 0;
+                        player.jumpsUsed = 0;
+                        player.invulnTimer = 1.5;
+                    }
+                }
+            }
+
+            // Coleta de Laços Azuis
+            worldRibbons.forEach(r => {
+                if (r.collected) return;
+                r.bobOffset += dt * 4.5;
+                if (aabb(player, r)) {
+                    r.collected = true;
+                    state.ribbonsCollected++;
+                    state.score += 100;
+                    sfx.playRibbon();
+                    vibrate(12);
+                    spawnParticles(r.x + 15, r.y + 15, '#2563eb', 10);
+                    addPopup('+100', r.x + 15, r.y, '#7dd3fc');
+                    updateHUD();
+                }
+            });
+
+            // Inimigos comuns
+            worldEnemies.forEach(en => {
+                if (!en.alive) {
+                    if (en.squishTimer > 0) en.squishTimer -= dt;
+                    return;
+                }
+
+                en.walkAnim += dt * 10;
+                en.x += en.vx * dt;
+                if (en.x <= en.minX) {
+                    en.x = en.minX;
+                    en.vx = Math.abs(en.vx);
+                } else if (en.x + en.w >= en.maxX) {
+                    en.x = en.maxX - en.w;
+                    en.vx = -Math.abs(en.vx);
+                }
+
+                if (aabb(player, en)) {
+                    const prevBottom = player.y + player.h - player.vy * dt;
+                    if (player.vy > 0 && prevBottom <= en.y + en.h * 0.62) {
+                        en.alive = false;
+                        en.squishTimer = 0.5;
+                        player.vy = -390;
+                        player.jumpsUsed = 1;
+                        state.enemiesDefeated++;
+                        state.score += 200;
+                        sfx.playStomp();
+                        vibrate(25);
+                        spawnParticles(en.x + en.w / 2, en.y + en.h / 2, '#38bdf8', 14);
+                        addPopup(`💥 ${en.label} Superado! +200`, en.x + en.w / 2, en.y - 10, '#38bdf8');
+                        updateHUD();
+                    } else {
+                        handlePlayerDamage(en.label);
+                    }
+                }
+            });
+
+            // Atualização e Combate contra o VILÃO CHEFÃO (BOSS)
+            if (boss && boss.alive) {
+                updateBoss(dt);
+            }
+
+            // Projéteis do Chefão
+            for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+                const proj = bossProjectiles[i];
+                proj.x += proj.vx * dt;
+                if (aabb(player, proj)) {
+                    bossProjectiles.splice(i, 1);
+                    handlePlayerDamage(boss.projectileLabel);
+                    continue;
+                }
+                if (proj.x < boss.minX - 180 || proj.x > boss.maxX + 180) {
+                    bossProjectiles.splice(i, 1);
+                }
+            }
+
+            // Chegada na Bandeira Azul
+            if (player.x + player.w >= stage.flagX - 4) {
+                player.x = stage.flagX - player.w + 4;
+                player.vx = 0;
+                state.score += 500;
+                if (state.mode === 'challenge') {
+                    const timeBonus = Math.max(0, Math.round((120 - state.elapsedSeconds) * 5));
+                    state.score += timeBonus;
+                }
+                updateHUD();
+                sfx.playFlagVictory();
+                vibrate([40, 30, 40, 30, 80]);
+                spawnParticles(stage.flagX, GROUND_Y - 140, '#2563eb', 28);
+                spawnParticles(stage.flagX, GROUND_Y - 140, '#38bdf8', 22);
+                state.flagAnimY = GROUND_Y - 210;
+                state.screen = 'FLAG_SLIDE';
+            }
+
+            // Câmera suave acompanhando o jogador
+            const targetCamX = player.x - state.viewW * 0.34;
+            const maxCamX = Math.max(0, stage.lengthTiles * TILE - state.viewW);
+            state.cameraX += (Math.max(0, Math.min(maxCamX, targetCamX)) - state.cameraX) * Math.min(1, dt * 8);
+
+            updateEffects(dt);
+        }
+
+        function updateBoss(dt) {
+            if (boss.hurtTimer > 0) boss.hurtTimer -= dt;
+
+            // Patrulha na arena
+            boss.x += boss.vx * dt;
+            if (boss.x <= boss.minX) {
+                boss.x = boss.minX;
+                boss.vx = Math.abs(boss.vx);
+            } else if (boss.x + boss.w >= boss.maxX) {
+                boss.x = boss.maxX - boss.w;
+                boss.vx = -Math.abs(boss.vx);
+            }
+
+            // Salto periódico do Chefão
+            boss.jumpCooldown -= dt;
+            if (boss.jumpCooldown <= 0 && boss.y + boss.h >= GROUND_Y - 2) {
+                boss.vy = -410;
+                boss.jumpCooldown = 2.4 + Math.random() * 0.8;
+            }
+
+            boss.vy += 1200 * dt;
+            boss.y += boss.vy * dt;
+            if (boss.y + boss.h >= GROUND_Y) {
+                boss.y = GROUND_Y - boss.h;
+                boss.vy = 0;
+            }
+
+            // Dispara projétil lento quando o jogador está perto da arena
+            if (Math.abs(player.x - boss.x) < 420) {
+                boss.shootCooldown -= dt;
+                if (boss.shootCooldown <= 0) {
+                    boss.shootCooldown = 2.5;
+                    const dir = player.x < boss.x ? -1 : 1;
+                    bossProjectiles.push({
+                        x: boss.x + (dir === -1 ? -16 : boss.w),
+                        y: GROUND_Y - 30,
+                        w: 48,
+                        h: 22,
+                        vx: dir * 165
+                    });
+                }
+            }
+
+            // Colisão Jogador x Chefão
+            if (aabb(player, boss)) {
+                const prevBottom = player.y + player.h - player.vy * dt;
+                if (player.vy > 0 && prevBottom <= boss.y + boss.h * 0.45 && boss.hurtTimer <= 0) {
+                    // Acertou a cabeça do Chefão!
+                    boss.hp--;
+                    boss.hurtTimer = 0.7;
+                    player.vy = -450;
+                    player.jumpsUsed = 1;
+                    vibrate([35, 30, 45]);
+
+                    if (boss.hp <= 0) {
+                        boss.alive = false;
+                        bossProjectiles = [];
+                        state.enemiesDefeated++;
+                        state.score += 600;
+                        sfx.playBossDefeat();
+                        spawnParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, '#2563eb', 30);
+                        spawnParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, '#38bdf8', 25);
+                        addPopup(`🏆 ${boss.name} DERROTADO! +600`, boss.x + boss.w / 2, boss.y - 20, '#38bdf8');
+                    } else {
+                        sfx.playBossHit();
+                        spawnParticles(boss.x + boss.w / 2, boss.y, '#ffbe0b', 16);
+                        addPopup(`💥 Acertou! (${boss.hp}/${boss.maxHp} HP)`, boss.x + boss.w / 2, boss.y - 16, '#ffbe0b');
+                    }
+                    updateHUD();
+                } else if (boss.hurtTimer <= 0) {
+                    handlePlayerDamage(boss.name);
+                }
+            }
+        }
+
+        function updateEffects(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 320 * dt;
+                p.alpha -= dt * 1.6;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+            for (let i = popups.length - 1; i >= 0; i--) {
+                const pop = popups[i];
+                pop.y += pop.vy * dt;
+                pop.alpha -= dt * 0.85;
+                if (pop.alpha <= 0) popups.splice(i, 1);
+            }
+        }
+
+        function showVictoryModal() {
+            state.screen = 'VICTORY';
+            const hasNext = state.stageIndex < STAGES.length - 1;
+            document.getElementById('victory-title').textContent = hasNext
+                ? `${STAGES[state.stageIndex].name} Concluída!`
+                : '🏆 Missão Novembro Azul Completa!';
+            document.getElementById('win-score').textContent = state.score;
+            document.getElementById('win-ribbons').textContent = state.ribbonsCollected;
+            document.getElementById('win-enemies').textContent = state.enemiesDefeated;
+
+            const nextBtn = document.getElementById('btn-next-stage');
+            nextBtn.style.display = hasNext ? 'block' : 'none';
+
+            document.getElementById('screen-victory').classList.remove('hidden');
+        }
+
+        // ==========================================
+        // 10. RENDERIZAÇÃO GRÁFICA (LAÇOS AZUIS + CHEFÃO)
+        // ==========================================
+        function drawBlueRibbonShape(cx, cy, scale = 1) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(scale, scale);
+
+            // Pernas cruzadas do laço azul
+            ctx.strokeStyle = '#1d4ed8';
+            ctx.lineWidth = 4.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-6, 11);
+            ctx.lineTo(5, -2);
+            ctx.moveTo(6, 11);
+            ctx.lineTo(-5, -2);
+            ctx.stroke();
+
+            // Laço superior Azul Royal brilhante
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 4.5;
+            ctx.beginPath();
+            ctx.moveTo(-5, -2);
+            ctx.bezierCurveTo(-9, -11, 9, -11, 5, -2);
+            ctx.stroke();
+
+            // Brilho interno azul-celeste
+            ctx.strokeStyle = '#60a5fa';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(-4, -3);
+            ctx.bezierCurveTo(-7, -9, 7, -9, 4, -3);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const stage = STAGES[state.stageIndex];
+
+            // Fundo Céu Azul
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+            skyGrad.addColorStop(0, stage.skyTop);
+            skyGrad.addColorStop(1, stage.skyBottom);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            ctx.scale(state.scale, state.scale);
+
+            const viewW = state.viewW;
+
+            // Paralaxe 1: Nuvens
+            clouds.forEach(c => {
+                const screenX = c.x - state.cameraX * 0.35;
+                if (screenX < -160 || screenX > viewW + 160) return;
+                drawCloud(screenX, c.y, c.scale);
+            });
+
+            // Paralaxe 2: Colinas verdes
+            hills.forEach(hill => {
+                const screenX = hill.x - state.cameraX * 0.55;
+                if (screenX + hill.w < -50 || screenX > viewW + 50) return;
+                ctx.fillStyle = 'rgba(26, 148, 86, 0.55)';
+                ctx.beginPath();
+                ctx.moveTo(screenX, GROUND_Y);
+                ctx.quadraticCurveTo(screenX + hill.w * 0.5, GROUND_Y - hill.h * 1.6, screenX + hill.w, GROUND_Y);
+                ctx.fill();
+            });
+
+            // Câmera do Mundo
+            ctx.translate(-state.cameraX, 0);
+
+            // Chão de Tijolos + Grama (preenche até o fundo da tela)
+            const startTile = Math.max(0, Math.floor(state.cameraX / TILE) - 1);
+            const endTile = Math.min(stage.lengthTiles, Math.ceil((state.cameraX + viewW) / TILE) + 2);
+
+            for (let tx = startTile; tx < endTile; tx++) {
+                const isPit = stage.pits.some(p => tx >= p.start && tx <= p.end);
+                if (isPit) continue;
+
+                const gx = tx * TILE;
+                ctx.fillStyle = stage.groundColor;
+                ctx.fillRect(gx, GROUND_Y, TILE, WORLD_HEIGHT - GROUND_Y + 20);
+
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(gx + 1, GROUND_Y + 11, TILE - 2, TILE - 11);
+
+                ctx.fillStyle = stage.grassColor;
+                ctx.fillRect(gx, GROUND_Y, TILE, 11);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+                ctx.fillRect(gx, GROUND_Y, TILE, 3);
+            }
+
+            // Mastro e Bandeira Azul ao final
+            drawFlagPole(stage.flagX, GROUND_Y);
+
+            // Canos e Blocos
+            worldSolids.forEach(b => {
+                if (b.x + b.w < state.cameraX - 40 || b.x > state.cameraX + viewW + 40) return;
+                drawBlock(b);
+            });
+
+            // Balões com LAÇOS AZUIS (corrigido para Azul Royal!)
+            worldRibbons.forEach(r => {
+                if (r.collected) return;
+                const bobY = Math.sin(r.bobOffset) * 4;
+                const cx = r.x + r.w / 2;
+                const cy = r.y + r.h / 2 + bobY;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+                ctx.fill();
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+
+                drawBlueRibbonShape(cx, cy, 0.92);
+            });
+
+            // Inimigos Comuns
+            worldEnemies.forEach(en => {
+                if (!en.alive && en.squishTimer <= 0) return;
+                drawEnemy(en);
+            });
+
+            // VILÃO CHEFÃO (BOSS)
+            if (boss && boss.alive) {
+                drawBoss(boss);
+            }
+
+            // Projéteis do Chefão
+            bossProjectiles.forEach(proj => {
+                ctx.save();
+                ctx.fillStyle = '#dc2626';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(proj.x, proj.y, proj.w, proj.h, 8);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 10px Outfit';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(boss.projectileLabel, proj.x + proj.w / 2, proj.y + proj.h / 2 + 1);
+                ctx.restore();
+            });
+
+            // Personagem Lucas
+            drawPlayer();
+
+            // Partículas
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Textos Flutuantes
+            popups.forEach(pop => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pop.alpha);
+                ctx.font = '800 13px Outfit';
+                ctx.textAlign = 'center';
+                const tw = ctx.measureText(pop.text).width + 14;
+                ctx.fillStyle = 'rgba(6, 18, 40, 0.88)';
+                ctx.beginPath();
+                ctx.roundRect(pop.x - tw / 2, pop.y - 12, tw, 20, 7);
+                ctx.fill();
+                ctx.fillStyle = pop.color;
+                ctx.fillText(pop.text, pop.x, pop.y + 2);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        function drawCloud(x, y, s) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+            ctx.beginPath();
+            ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 18 * s, y - 8 * s, 24 * s, 0, Math.PI * 2);
+            ctx.arc(x + 40 * s, y, 20 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawBlock(b) {
+            const drawY = b.y + b.bounceOffset;
+            ctx.save();
+
+            if (b.type === 'pipe') {
+                const lipH = 16;
+                ctx.fillStyle = '#1d4ed8';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+
+                // Corpo do tubo apoiado no chão
+                ctx.fillRect(b.x + 5, drawY + lipH, b.w - 10, b.h - lipH);
+                ctx.strokeRect(b.x + 5, drawY + lipH, b.w - 10, b.h - lipH);
+
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(b.x + 11, drawY + lipH + 2, 9, b.h - lipH - 4);
+
+                // Boca superior do tubo
+                ctx.fillStyle = '#2563eb';
+                ctx.beginPath();
+                ctx.roundRect(b.x, drawY, b.w, lipH, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#60a5fa';
+                ctx.fillRect(b.x + 7, drawY + 3, 11, lipH - 6);
+            } else if (b.type === 'question') {
+                ctx.fillStyle = b.used ? '#64748b' : '#ffbe0b';
+                ctx.strokeStyle = b.used ? '#334155' : '#78350f';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(b.x, drawY, b.w, b.h, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = b.used ? '#475569' : '#b45309';
+                [
+                    [b.x + 5, drawY + 5],
+                    [b.x + b.w - 8, drawY + 5],
+                    [b.x + 5, drawY + b.h - 8],
+                    [b.x + b.w - 8, drawY + b.h - 8]
+                ].forEach(([rx, ry]) => ctx.fillRect(rx, ry, 3, 3));
+
+                if (!b.used) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 23px Outfit';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('?', b.x + b.w / 2, drawY + b.h / 2 + 1);
+                }
+            } else {
+                ctx.fillStyle = '#c05621';
+                ctx.strokeStyle = '#4a1d05';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(b.x, drawY, b.w, b.h, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(b.x, drawY + b.h / 2);
+                ctx.lineTo(b.x + b.w, drawY + b.h / 2);
+                ctx.moveTo(b.x + b.w / 2, drawY);
+                ctx.lineTo(b.x + b.w / 2, drawY + b.h / 2);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawFlagPole(flagX, groundY) {
+            ctx.save();
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(flagX - 18, groundY - 22, 36, 22);
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(flagX - 3, groundY - 230, 6, 208);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(flagX, groundY - 234, 9, 0, Math.PI * 2);
+            ctx.fill();
+
+            const fy = state.screen === 'FLAG_SLIDE' || state.screen === 'VICTORY'
+                ? state.flagAnimY
+                : groundY - 222;
+
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.moveTo(flagX + 3, fy);
+            ctx.lineTo(flagX + 70, fy + 20);
+            ctx.lineTo(flagX + 3, fy + 40);
+            ctx.closePath();
+            ctx.fill();
+
+            drawBlueRibbonShape(flagX + 24, fy + 20, 0.78);
+            ctx.restore();
+        }
+
+        function drawEnemy(en) {
+            ctx.save();
+            const h = en.alive ? en.h : 12;
+            const y = en.y + (en.h - h);
+            const footShift = en.alive ? Math.sin(en.walkAnim) * 3 : 0;
+
+            if (en.alive) {
+                // Pés animados
+                ctx.fillStyle = '#1e1b4b';
+                ctx.fillRect(en.x + 4 + footShift, y + h - 4, 10, 5);
+                ctx.fillRect(en.x + en.w - 14 - footShift, y + h - 4, 10, 5);
+            }
+
+            // Corpo do inimigo
+            ctx.fillStyle = en.color;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(en.x, y, en.w, h - 2, [14, 14, 5, 5]);
+            ctx.fill();
+            ctx.stroke();
+
+            if (en.alive) {
+                // Olhos bravos e sobrancelhas
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(en.x + 7, y + 10, 7, 8);
+                ctx.fillRect(en.x + en.w - 14, y + 10, 7, 8);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(en.x + 9, y + 12, 3, 5);
+                ctx.fillRect(en.x + en.w - 12, y + 12, 3, 5);
+
+                // Sobrancelhas franzidas
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(en.x + 6, y + 8);
+                ctx.lineTo(en.x + 15, y + 11);
+                ctx.moveTo(en.x + en.w - 6, y + 8);
+                ctx.lineTo(en.x + en.w - 15, y + 11);
+                ctx.stroke();
+
+                // Etiqueta do Mito/Tabu
+                ctx.font = '800 10.5px Outfit';
+                ctx.textAlign = 'center';
+                const labelW = ctx.measureText(en.label).width + 10;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.beginPath();
+                ctx.roundRect(en.x + en.w / 2 - labelW / 2, y - 18, labelW, 15, 5);
+                ctx.fill();
+
+                ctx.fillStyle = '#fecdd3';
+                ctx.fillText(en.label, en.x + en.w / 2, y - 7);
+            }
+            ctx.restore();
+        }
+
+        function drawBoss(b) {
+            ctx.save();
+            if (b.hurtTimer > 0 && Math.floor(b.hurtTimer * 18) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            const cx = b.x + b.w / 2;
+            const bottomY = b.y + b.h;
+
+            // Capa escura dramática
+            ctx.fillStyle = b.coatColor;
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(b.x + 4, b.y + 22, b.w - 8, b.h - 22, [12, 12, 6, 6]);
+            ctx.fill();
+            ctx.stroke();
+
+            // Cabeça do Vilão
+            ctx.fillStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.arc(cx, b.y + 18, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Cartola / Chapéu de Vilão
+            ctx.fillStyle = b.hatColor;
+            ctx.fillRect(cx - 20, b.y + 5, 40, 5);
+            ctx.fillRect(cx - 13, b.y - 12, 26, 17);
+
+            // Olhos vermelhos brilhantes
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(cx - 8, b.y + 15, 5, 4);
+            ctx.fillRect(cx + 3, b.y + 15, 5, 4);
+
+            // Barra de Vida do Chefão acima da cabeça
+            const barW = 74;
+            const barH = 8;
+            const barX = cx - barW / 2;
+            const barY = b.y - 26;
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 5);
+            ctx.fill();
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(barX, barY, barW * (b.hp / b.maxHp), barH);
+
+            // Nome do Chefão
+            ctx.font = '900 11px Outfit';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(`👑 ${b.name}`, cx, barY - 6);
+
+            ctx.restore();
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            if (player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0) {
+                ctx.globalAlpha = 0.45;
+            }
+
+            const cx = player.x + player.w / 2;
+            const bottomY = player.y + player.h;
+
+            // Aura do Escudo da Prevenção
+            if (player.hasShield) {
+                ctx.beginPath();
+                ctx.arc(cx, player.y + player.h / 2, 28, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.24)';
+                ctx.fill();
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2.2;
+                ctx.stroke();
+            }
+
+            const swing = player.grounded ? Math.sin(player.animTime) * 7 : 5;
+
+            // Pernas
+            ctx.strokeStyle = '#1e3a8a';
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(cx - 4, bottomY - 14);
+            ctx.lineTo(cx - 4 - swing, bottomY - 2);
+            ctx.moveTo(cx + 4, bottomY - 14);
+            ctx.lineTo(cx + 4 + swing, bottomY - 2);
+            ctx.stroke();
+
+            // Camiseta Azul Novembro Azul
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.roundRect(cx - 10, bottomY - 30, 20, 18, 5);
+            ctx.fill();
+
+            // Emblema Laço Azul claro no peito
+            drawBlueRibbonShape(cx + (player.facing * 2), bottomY - 21, 0.48);
+
+            // Cabeça
+            ctx.fillStyle = '#ffd1a9';
+            ctx.beginPath();
+            ctx.arc(cx, bottomY - 36, 9, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Boné Azul
+            ctx.fillStyle = '#1d4ed8';
+            ctx.beginPath();
+            ctx.arc(cx, bottomY - 38, 9.5, Math.PI, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(player.facing === 1 ? cx : cx - 13, bottomY - 39, 13, 3);
+
+            // Olho
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(cx + (player.facing * 4), bottomY - 36, 2.5, 3.5);
+
+            ctx.restore();
+        }
+
+        // ==========================================
+        // 11. LOOP PRINCIPAL E EVENTOS DE MENU
+        // ==========================================
+        let lastTime = 0;
+        function gameLoop(now) {
+            const dt = Math.min(0.05, (now - lastTime) / 1000);
+            lastTime = now;
+
+            update(dt);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.querySelectorAll('#mode-selector .select-box').forEach(box => {
+            box.addEventListener('click', () => {
+                document.querySelectorAll('#mode-selector .select-box').forEach(b => b.classList.remove('active'));
+                box.classList.add('active');
+                state.mode = box.dataset.mode;
+            });
+        });
+
+        document.querySelectorAll('#stage-selector .select-box').forEach(box => {
+            box.addEventListener('click', () => {
+                document.querySelectorAll('#stage-selector .select-box').forEach(b => b.classList.remove('active'));
+                box.classList.add('active');
+                state.stageIndex = Number(box.dataset.stage);
+            });
+        });
+
+        document.getElementById('btn-start-game').addEventListener('click', () => {
+            startStage(state.stageIndex, false);
+        });
+
+        document.getElementById('btn-hud-menu').addEventListener('click', goToMenu);
+        document.getElementById('btn-victory-menu').addEventListener('click', goToMenu);
+        document.getElementById('btn-gameover-menu').addEventListener('click', goToMenu);
+
+        document.getElementById('btn-next-stage').addEventListener('click', () => {
+            if (state.stageIndex < STAGES.length - 1) {
+                startStage(state.stageIndex + 1, true);
+            }
+        });
+
+        document.getElementById('btn-victory-replay').addEventListener('click', () => {
+            startStage(state.stageIndex, false);
+        });
+
+        document.getElementById('btn-retry-stage').addEventListener('click', () => {
+            startStage(state.stageIndex, false);
+        });
+
+        document.getElementById('btn-mute').addEventListener('click', () => sfx.toggleMute());
+
+        window.onload = () => {
+            resizeWorld();
+            startStage(0, false);
+            goToMenu();
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
